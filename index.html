@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Survey — Animated (Fixed Embed)</title>
+<title>Survey — Animated (Embed Detection + Fallback)</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -18,7 +18,7 @@
     display:flex;align-items:center;justify-content:center;padding:28px;
   }
 
-  /* background */
+  /* Background / blobs (same as before) */
   .bg{position:fixed;inset:0;z-index:-50;pointer-events:none}
   .bg-gradient{position:absolute;inset:0;background:
     radial-gradient(600px 400px at 10% 10%, rgba(123,92,255,0.14), transparent 8%),
@@ -54,7 +54,7 @@
   .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:60}
   .modal.open{pointer-events:auto}
   .modal-backdrop{position:absolute;inset:0;background:linear-gradient(180deg, rgba(2,6,23,0.6), rgba(2,6,23,0.72));backdrop-filter: blur(8px) saturate(120%) }
-  .iframe-modal{position:relative;width:min(1200px,98vw);height:min(86vh,980px);border-radius:12px;overflow:hidden;box-shadow:0 30px 120px rgba(2,6,23,0.9);transform:translateY(12px) scale(.995);transition:transform .28s cubic-bezier(.2,.9,.2,1);border:1px solid rgba(255,255,255,0.04);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));}
+  .iframe-modal{position:relative;width:min(1200px,98vw);height:min(86vh,980px);border-radius:12px;overflow:hidden;box-shadow:0 30px 120px rgba(2,6,23,0.9);transform:translateY(12px) scale(.995);transition:transform .28s cubic-bezier(.2,.9,.2,1);border:1px solid rgba(255,255,255,0.04);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));display:flex;align-items:stretch}
   .modal.open .iframe-modal{transform:translateY(0) scale(1)}
   .close-x{position:absolute;right:18px;top:14px;background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));border-radius:10px;padding:8px;cursor:pointer;color:white;font-weight:700;border:none;z-index:12;backdrop-filter: blur(4px)}
   .iframe-modal iframe{width:100%;height:100%;display:block;border:0}
@@ -62,6 +62,10 @@
   .loader{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:68px;height:68px;border-radius:12px;background:var(--glass);display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 10px 32px rgba(2,6,23,0.6)}
   .spinner{width:36px;height:36px;border-radius:50%;border:4px solid rgba(255,255,255,0.08);border-top-color: rgba(255,255,255,0.9); animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Fallback message when embed blocked */
+  .embed-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px;text-align:center;gap:14px;background:linear-gradient(180deg, rgba(2,6,23,0.6), rgba(2,6,23,0.6));color:var(--muted);z-index:11}
+  .fallback-btn{background:linear-gradient(90deg,var(--accent1),var(--accent2));border:none;padding:10px 14px;border-radius:12px;color:#021;font-weight:800;cursor:pointer}
 
   .fab{position:fixed;right:28px;bottom:28px;z-index:70;background:linear-gradient(90deg,var(--accent1),var(--accent2));border-radius:14px;padding:12px 14px;color:#021;font-weight:800;box-shadow:0 18px 44px rgba(11,18,44,0.5);cursor:pointer;border:none}
   .note{font-size:12px;color:var(--muted);margin-top:8px}
@@ -101,8 +105,9 @@
       <div id="survey" style="height:0;overflow:hidden">Survey Section</div>
 
       <div class="iframe-wrap" id="iframeWrap">
-        <!-- single iframe instance (we will move this iframe into the modal on open) -->
-        <iframe id="gf" src="https://docs.google.com/forms/d/e/1FAIpQLScqaX-aPUuq9UxdKuuf_wFxFRCMdrpjEPHhsYZLtyvUKGk7iQ/viewform?embedded=true"
+        <!-- single iframe instance we will move into the modal on open -->
+        <iframe id="gf"
+                src="https://docs.google.com/forms/d/e/1FAIpQLScqaX-aPUuq9UxdKuuf_wFxFRCMdrpjEPHhsYZLtyvUKGk7iQ/viewform?embedded=true"
                 title="Survey form" loading="lazy" referrerpolicy="no-referrer"></iframe>
       </div>
 
@@ -110,7 +115,7 @@
         <div class="dot" aria-hidden></div>
         <div style="font-size:13px">This page is a visual wrapper — submissions still go to the Google Form owner.</div>
       </div>
-      <div class="note">If the embed does not appear correctly when opened from a local file, try serving the folder with <code>python -m http.server</code> and open <code>http://localhost:8000</code>.</div>
+      <div class="note">If the embed doesn't show on GitHub pages, open the form in a new tab using the fallback button.</div>
     </section>
   </div>
 
@@ -121,7 +126,17 @@
     <div class="iframe-modal" role="document" aria-label="Full screen form container">
       <button class="close-x" id="closeBtn" aria-label="Close (Esc)">✕</button>
       <div class="loader" id="loader" style="display:none"><div class="spinner" aria-hidden="true"></div></div>
-      <!-- we will move the #gf iframe element into this container when opening -->
+
+      <!-- embed-fallback container (hidden by default) -->
+      <div class="embed-fallback" id="embedFallback" style="display:none">
+        <div style="font-size:18px;font-weight:700">Embed blocked or failed to load</div>
+        <div style="max-width:56ch">Your browser or the site is preventing the form from being embedded. You can open the form directly in a new tab.</div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button class="fallback-btn" id="openNewTabBtn">Open form in new tab</button>
+          <button class="fallback-btn" id="openDirectBtn">Open original</button>
+        </div>
+      </div>
+      <!-- iframe (we will move #gf here on open) -->
     </div>
   </div>
 
@@ -129,7 +144,7 @@
 
 <script>
 /* ---------------------------
-   small starfield canvas
+   starfield (same as before)
    --------------------------- */
 const canvas = document.getElementById('stars');
 const ctx = canvas.getContext('2d');
@@ -166,7 +181,7 @@ if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
 window.addEventListener('beforeunload', ()=>{ if(rafId) cancelAnimationFrame(rafId); });
 
 /* ---------------------------
-   Modal + iframe move technique
+   Modal + embed detection + fallback
    --------------------------- */
 const openBtn = document.getElementById('openModalBtn');
 const modal = document.getElementById('modal');
@@ -177,27 +192,32 @@ const loader = document.getElementById('loader');
 const fab = document.getElementById('fab');
 
 const gf = document.getElementById('gf');
-const originalParent = gf.parentNode;      // .iframe-wrap
-const placeholder = document.createElement('div'); // where we'll put it back
+const originalParent = gf.parentNode;
+const placeholder = document.createElement('div');
+placeholder.style.minHeight = '20px';
 
-placeholder.style.minHeight = '20px'; // harmless placeholder
+const embedFallback = document.getElementById('embedFallback');
+const openNewTabBtn = document.getElementById('openNewTabBtn');
+const openDirectBtn = document.getElementById('openDirectBtn');
+
+const FORM_URL = gf.src; // original form url
 
 let loadTimeout = null;
 
-function showLoader(){ loader.style.display = 'flex'; }
+function showLoader(){ loader.style.display = 'flex'; embedFallback.style.display = 'none'; }
 function hideLoader(){ loader.style.display = 'none'; }
 
 async function openModal(withFullscreen = true){
   // move iframe into the modal container
   if (gf.parentNode !== iframeModalContainer){
-    originalParent.replaceChild(placeholder, gf);
-    iframeModalContainer.appendChild(gf);
-    // ensure iframe fills the modal
-    gf.style.position = 'absolute';
-    gf.style.inset = '0';
-    gf.style.width = '100%';
-    gf.style.height = '100%';
-    gf.style.border = '0';
+    try {
+      originalParent.replaceChild(placeholder, gf);
+      iframeModalContainer.appendChild(gf);
+      // set sizing to fill the modal
+      gf.style.position = 'absolute'; gf.style.inset = '0'; gf.style.width = '100%'; gf.style.height = '100%'; gf.style.border = '0';
+    } catch(e){
+      console.warn('Could not move iframe:', e);
+    }
   }
 
   modal.classList.add('open');
@@ -211,44 +231,68 @@ async function openModal(withFullscreen = true){
     // ignore if blocked
   }
 
-  // handle load event (one-time)
+  // If iframe loads successfully we hide loader; else we show fallback after timeout
   const onLoad = () => {
     clearTimeout(loadTimeout);
     gf.removeEventListener('load', onLoad);
+    // try to confirm it's actually loaded and not blocked: attempt a harmless cross-origin access inside try/catch
+    let blocked = false;
+    try {
+      // Access a property that will throw if cross-origin and the remote site has restrictive policies.
+      // NOTE: Many cross-origin hosts will still allow reading contentWindow without throwing,
+      // so we mainly rely on the load timeout as the robust indicator.
+      const ok = !!(gf.contentWindow && typeof gf.contentWindow.postMessage === 'function');
+      if(!ok) blocked = true;
+    } catch(e) {
+      blocked = true;
+    }
+
     hideLoader();
-    try { gf.contentWindow && gf.contentWindow.focus(); } catch(e){}
+    if(blocked) {
+      // show fallback UI
+      console.warn('Embed likely blocked by cross-origin rules or browser.');
+      showEmbedFallback();
+    } else {
+      // embed seems OK
+      embedFallback.style.display = 'none';
+      console.log('Embed loaded successfully.');
+    }
   };
   gf.addEventListener('load', onLoad);
 
-  // fallback timeout: some environments may never fire load reliably
+  // fallback timeout: if no load within X ms, assume blocked
   loadTimeout = setTimeout(()=> {
     gf.removeEventListener('load', onLoad);
     hideLoader();
+    console.warn('Embed load timed out — showing fallback.');
+    showEmbedFallback();
   }, 9000);
+}
+
+function showEmbedFallback(){
+  // show user-friendly fallback UI inside modal
+  embedFallback.style.display = 'flex';
+  // console hint for debugging
+  console.log('Embed fallback active. Try opening the form directly or checking console/network for X-Frame-Options/CSP.');
 }
 
 async function closeModal(){
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden','true');
 
-  // exit fullscreen if active
   try { if (document.fullscreenElement) await document.exitFullscreen(); } catch(e){}
 
-  // move iframe back to the original spot after a short transition
+  // return iframe to original location after animation completes
   setTimeout(()=> {
     try {
       if (iframeModalContainer.contains(gf)) {
         iframeModalContainer.removeChild(gf);
         originalParent.replaceChild(gf, placeholder);
-        // clear inline styles we set
-        gf.style.position = '';
-        gf.style.inset = '';
-        gf.style.width = '';
-        gf.style.height = '';
-        gf.style.border = '';
+        gf.style.position = ''; gf.style.inset = ''; gf.style.width = ''; gf.style.height = ''; gf.style.border = '';
       }
     } catch(e){}
     hideLoader();
+    embedFallback.style.display = 'none';
   }, 260);
 }
 
@@ -258,19 +302,17 @@ fab.addEventListener('click', ()=> openModal(true));
 closeBtn.addEventListener('click', ()=> closeModal());
 backdrop.addEventListener('click', ()=> closeModal());
 modal.addEventListener('click', (e)=> { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', (e)=> { if (e.key === 'Escape') closeModal(); if (e.key && e.key.toLowerCase() === 'f'){ if (modal.classList.contains('open')) closeModal(); else openModal(true); }});
 
-document.addEventListener('keydown', (e)=> {
-  if (e.key === 'Escape') closeModal();
-  if (e.key && e.key.toLowerCase() === 'f') {
-    if (modal.classList.contains('open')) closeModal(); else openModal(true);
-  }
-});
+// fallback buttons open the form in a new tab (guaranteed to work)
+openNewTabBtn.addEventListener('click', ()=> window.open(FORM_URL, '_blank', 'noopener'));
+openDirectBtn.addEventListener('click', ()=> window.location.href = FORM_URL);
 
-/* Helpful note:
-   - If embedding still looks broken under file://, run a small HTTP server in the folder and open http://localhost:8000
-   - Example: `python -m http.server 8000` (requires Python 3)
+/* Debugging tip: open DevTools (F12) -> Console / Network and look for:
+   - "Refused to display '...' in a frame because it set 'X-Frame-Options' to 'SAMEORIGIN'." OR
+   - Content Security Policy errors preventing embedding.
+   If you see these, the remote site blocks embedding and the fallback button is the right solution.
 */
-
 </script>
 </body>
 </html>
