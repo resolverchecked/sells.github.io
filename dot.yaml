@@ -1,0 +1,9 @@
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v4 # <-- You MUST have this step!
+
+  - name: Build Jekyll site
+    uses: actions/jekyll-build-pages@v1
+    with:
+      source: ./docs
+      destination: ./docs/_site
