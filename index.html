@@ -3,192 +3,217 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Survey — Vanta + Fallback</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <title>Animated BG — local bg loader</title>
   <style>
     :root{
-      --bg:#050507;
-      --panel:#0f1722;
-      --muted: rgba(234,240,255,0.72);
-      --accent:#7c6cff;
-      --card-border: rgba(255,255,255,0.04);
+      --muted:#bfc9d6;
+      --accent:#6ee7b7;
+      --bg-fallback-color:#050507;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;color:#eaf0ff;
-      background:var(--bg);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px;position:relative;overflow:auto;
-      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+      margin:0;font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color: #eaf0ff; min-height:100vh; display:flex; align-items:center; justify-content:center;
+      padding:28px; background:var(--bg-fallback-color); position:relative; overflow:auto;
     }
 
-    /* Vanta container behind everything */
-    #vanta-bg{position:fixed;inset:0;z-index:0;pointer-events:none}
-
-/* ----------------------------
-   CSS fallback (halftone) — runs when Vanta fails
-   Uses background-position animation (very reliable)
-   ---------------------------- */
-    body.vanta-fallback::before,
-    body.vanta-fallback::after{
-      content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    /* GIF / image as CSS background (set by JS) */
+    body.has-gif::before{
+      content:'';
+      position:fixed; inset:0; z-index:0; pointer-events:none;
+      background-repeat:no-repeat; background-position:center; background-size:cover;
+      filter:contrast(.98) saturate(.95); opacity:0.94;
     }
 
-    /* fine halftone dots */
-    body.vanta-fallback::before{
-      background-image:
-        radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-        radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
-      background-size: 18px 18px, 56px 56px;
-      background-position: 0 0, 28px 28px;
-      opacity:0.06;
-      mix-blend-mode:overlay;
-      animation:halftoneShift 20s linear infinite;
-      will-change: background-position;
+    .bg-overlay{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg, rgba(0,0,0,0.30), rgba(0,0,0,0.55));}
+
+    #bg-video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;opacity:0.95;}
+    .bg-img-fallback{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;opacity:0.95;}
+
+    /* UI */
+    .ui{position:relative;z-index:2;max-width:900px;width:100%}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{margin:0;font-size:18px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+    .card{background:rgba(0,0,0,0.42); border-radius:10px; padding:14px; border:1px solid rgba(255,255,255,0.03);}
+    .meta{color:var(--muted);font-size:13px;margin-top:10px}
+
+    /* reduced-motion banner */
+    #reduced-banner{
+      position:fixed; left:12px; bottom:12px; z-index:99; background:rgba(0,0,0,0.72);
+      color:var(--muted); padding:10px 12px; border-radius:10px; display:flex; gap:10px; align-items:center;
+      box-shadow:0 6px 24px rgba(0,0,0,0.6); font-size:13px;
     }
-
-    /* soft drifting light */
-    body.vanta-fallback::after{
-      background: radial-gradient(700px 240px at 50% 20%, rgba(124,108,255,0.05), transparent 20%),
-                  radial-gradient(600px 180px at 50% 80%, rgba(110,231,183,0.02), transparent 20%);
-      filter:blur(6px);
-      opacity:0.18;
-      animation:waveDrift 16s linear infinite;
-      mix-blend-mode:screen;
-    }
-
-    @keyframes halftoneShift{
-      0%{background-position:0 0, 28px 28px}
-      50%{background-position:-80px 22px, 8px 56px}
-      100%{background-position:0 0, 28px 28px}
-    }
-    @keyframes waveDrift{
-      0%{transform:translateZ(0) translateX(0)}
-      50%{transform:translateZ(0) translateX(120px)}
-      100%{transform:translateZ(0) translateX(0)}
-    }
-
-    /* Respect reduced motion: no animation at all */
-    @media (prefers-reduced-motion: reduce){
-      body.vanta-fallback::before, body.vanta-fallback::after{animation:none}
-    }
-
-    /* Content (above the background) */
-    .wrap{position:relative;z-index:2;width:100%;max-width:1100px}
-    header.site-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-    .brand{display:flex;gap:14px;align-items:center}
-    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#6ee7b7);display:flex;align-items:center;justify-content:center;font-weight:800;color:#021;font-size:20px;box-shadow:0 8px 30px rgba(0,0,0,0.6);}
-    h1{margin:0;font-size:20px;letter-spacing:-0.3px}
-    p.lead{margin:0;color:var(--muted);opacity:0.95;font-size:13px}
-
-    .actions{display:flex;gap:10px;align-items:center}
-    .subtle{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:8px 10px;border-radius:10px;font-size:13px;border:1px solid rgba(255,255,255,0.02)}
-
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:16px; padding:18px; box-shadow:0 12px 60px rgba(2,6,23,0.6); border:1px solid var(--card-border); position:relative; overflow:hidden}
-    .iframe-wrap{position:relative;width:100%;height:520px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);background:linear-gradient(180deg, rgba(0,0,0,0.20), rgba(255,255,255,0.01));backdrop-filter: blur(4px);}
-    .iframe-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
-    .meta{display:flex;gap:12px;align-items:center;margin-top:12px}
-    .dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(90deg,var(--accent),#6ee7b7)}
-
-    @media (max-width:980px){.iframe-wrap{height:640px}}
-    @media (max-width:700px){header.site-head{flex-direction:column;align-items:flex-start;gap:12px}.logo{width:48px;height:48px}.iframe-wrap{height:760px}}
+    .btn{background:var(--accent); color:#072018; border:0; padding:8px 10px; border-radius:8px; cursor:pointer; font-weight:600}
+    .btn.ghost{background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.04)}
+    .help{font-size:12px;color:var(--muted); margin-top:8px}
+    @media (max-width:700px){#reduced-banner{left:8px;right:8px;bottom:8px;flex-direction:column;align-items:flex-start}}
   </style>
 </head>
 <body>
+  <div class="bg-overlay" aria-hidden="true"></div>
 
-  <!-- Vanta root (will be filled if Vanta loads) -->
-  <div id="vanta-bg" aria-hidden="true"></div>
-
-  <div class="wrap" role="main">
-    <header class="site-head" aria-label="Form header">
-      <div class="brand">
-        <div class="logo">F</div>
-        <div>
-          <h1>Quick Survey</h1>
-          <p class="lead">One minute — share your thoughts. Responses go to the original Google Form.</p>
-        </div>
+  <div class="ui">
+    <header>
+      <div>
+        <h1>Local animated background</h1>
+        <p class="lead">Drop a file named <code>bg.gif</code> / <code>bg.mp4</code> (or similar) into this folder.</p>
       </div>
-
-      <div class="actions">
-        <div class="subtle">Powered by Google Forms</div>
-      </div>
+      <div class="subtle" style="color:var(--muted)">Local loader</div>
     </header>
 
-    <section class="card" aria-labelledby="survey">
-      <div id="survey" style="height:0;overflow:hidden">Survey Section</div>
-
-      <div class="iframe-wrap" id="iframeWrap">
-        <iframe id="gf" src="https://docs.google.com/forms/d/e/1FAIpQLScqaX-aPUuq9UxdKuuf_wFxFRCMdrpjEPHhsYZLtyvUKGk7iQ/viewform?embedded=true" title="Survey form" loading="lazy" referrerpolicy="no-referrer"></iframe>
+    <main class="card">
+      <div style="min-height:120px">
+        <strong>Quick checklist</strong>
+        <ul class="meta">
+          <li>Put your animation file in same folder as this file and name it <code>bg.gif</code> or <code>bg.mp4</code> etc.</li>
+          <li>If you open via <code>file://</code> and it fails, try serving with a local HTTP server (instructions below).</li>
+        </ul>
+        <div class="help">If your system/browser has <code>prefers-reduced-motion</code> enabled the page will respect it by default — you can override with the button at the bottom-right.</div>
       </div>
+    </main>
+  </div>
 
-      <div class="meta">
-        <div class="dot" aria-hidden></div>
-        <div style="font-size:13px">This page is a visual wrapper — submissions still go to the Google Form owner.</div>
+  <!-- reduced-motion banner (hidden/shown by JS) -->
+  <div id="reduced-banner" style="display:none" role="region" aria-live="polite">
+    <div>
+      Your system/browser is set to <strong>reduce motion</strong>. Animations are currently suppressed.
+      <div style="margin-top:6px">
+        <button id="animate-anyway" class="btn">Animate anyway</button>
+        <button id="keep-reduced" class="btn ghost">Keep reduced motion</button>
       </div>
-
-    </section>
+    </div>
   </div>
 
   <script>
-  /* 
-    Load three.js and Vanta dynamically; if either fails we activate CSS fallback.
-    If you want to host the JS locally, download the two files and change the paths below.
-  */
   (function(){
-    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if(reduced){ console.log('Reduced motion preference detected — using CSS fallback'); document.body.classList.add('vanta-fallback'); return; }
+    // local candidates (will check them in order)
+    const IMAGE_CANDIDATES = ['bg', 'bg.gif', 'bg.webp', 'bg.png', 'bg.jpg', 'bg.jpeg'];
+    const VIDEO_CANDIDATES = ['bg.mp4', 'bg.webm', 'bg.ogg'];
 
-    // helper to load script
-    function loadScript(src, timeout = 8000){
+    const banner = document.getElementById('reduced-banner');
+    const btnAnimate = document.getElementById('animate-anyway');
+    const btnKeep = document.getElementById('keep-reduced');
+
+    const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // If prefers-reduced-motion, show banner and wait for user choice.
+    if(prefersReduced){
+      banner.style.display = 'flex';
+      btnAnimate.addEventListener('click', () => {
+        banner.style.display = 'none';
+        startLoader({force:true});
+      });
+      btnKeep.addEventListener('click', () => {
+        banner.style.display = 'none';
+        console.log('User chose to keep reduced-motion; background animation suppressed.');
+      });
+    } else {
+      // start normally
+      startLoader({force:false});
+    }
+
+    function injectCssBg(url){
+      try {
+        document.body.classList.add('has-gif');
+        const css = `.has-gif::before{ background-image: url("${url}"); }`;
+        const style = document.createElement('style');
+        style.setAttribute('data-generated','gif-bg');
+        style.appendChild(document.createTextNode(css));
+        document.head.appendChild(style);
+        console.log('Applied CSS background:', url);
+      } catch(e){
+        console.warn('CSS injection failed, using <img> fallback', e);
+        applyImgFallback(url);
+      }
+    }
+
+    function applyImgFallback(url){
+      const existing = document.querySelector('.bg-img-fallback'); if(existing) existing.remove();
+      const img = document.createElement('img'); img.className = 'bg-img-fallback';
+      img.src = url; img.alt = ''; img.setAttribute('aria-hidden','true');
+      img.onload = ()=>console.log('bg <img> loaded:', url);
+      img.onerror = ()=>console.warn('bg <img> load failed:', url);
+      document.body.appendChild(img);
+    }
+
+    function insertVideo(url){
+      const old = document.getElementById('bg-video'); if(old) old.remove();
+      const v = document.createElement('video');
+      v.id = 'bg-video'; v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true; v.src = url;
+      v.setAttribute('aria-hidden','true');
+      v.addEventListener('loadeddata', ()=> console.log('bg <video> loaded:', url));
+      v.addEventListener('error', (e)=> { console.warn('bg <video> failed:', url, e); applyImgFallback(url); });
+      document.body.appendChild(v);
+    }
+
+    function tryImagesSequentially(list){
       return new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.async = true;
-        let done = false;
-        s.onload = () => { if(done) return; done = true; resolve(); };
-        s.onerror = () => { if(done) return; done = true; reject(new Error('Failed to load ' + src)); };
-        document.head.appendChild(s);
-        // timeout fallback
-        setTimeout(()=>{ if(done) return; done = true; reject(new Error('Timeout loading ' + src)); }, timeout);
+        let i = 0;
+        function next(){
+          if(i >= list.length) return reject();
+          const src = list[i++];
+          const img = new Image();
+          img.onload = ()=> resolve(src);
+          img.onerror = ()=> { console.warn('image candidate failed:', src); next(); };
+          try { img.src = src; } catch(e){ console.warn('setting img src error for', src, e); next(); }
+        }
+        next();
       });
     }
 
-    // Try to load THREE then Vanta, init; fallback to CSS if anything fails
-    (async function initVanta(){
-      try{
-        // CDN URLs — if your environment blocks CDNs, download these and serve locally
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js');
-        await loadScript('https://cdn.jsdelivr.net/gh/tengbao/vanta@0.5.21/dist/vanta.net.min.js');
-        if(window.VANTA && window.VANTA.NET){
-          window._vantaEffect = VANTA.NET({
-            el: "#vanta-bg",
-            mouseControls: true,
-            touchControls: true,
-            gyroControls: false,
-            minHeight: 200.00,
-            minWidth: 200.00,
-            scale: 1.0,
-            scaleMobile: 1.0,
-            color: 0x7c6cff,
-            backgroundColor: 0x050507,
-            points: 14.00,
-            maxDistance: 22.00,
-            spacing: 17.00
-          });
-          console.log('Vanta initialized ✅');
-        } else {
-          throw new Error('Vanta not available after load');
-        }
-      } catch(err){
-        console.warn('Vanta init failed — falling back to CSS. Error:', err);
-        document.body.classList.add('vanta-fallback');
+    // start loader; options: {force:boolean} where force ignores prefers-reduced-motion check
+    function startLoader(opts = {force:false}){
+      if(prefersReduced && !opts.force){
+        console.log('prefers-reduced-motion active; loader will not start.');
+        return;
       }
-    })();
+      tryImagesSequentially(IMAGE_CANDIDATES)
+        .then((goodSrc) => {
+          console.log('Image candidate loaded:', goodSrc);
+          injectCssBg(goodSrc);
+        }).catch(() => {
+          console.warn('No image candidate loaded — attempting video candidates');
+          // try each video candidate: we'll insert and rely on loadeddata/error events
+          (function tryVideo(list, idx=0){
+            if(idx >= list.length){ console.warn('No video candidate succeeded — final fallback try "bg" as image element'); applyImgFallback('bg'); return; }
+            const candidate = list[idx];
+            // create a temp video to test quickly
+            const v = document.createElement('video');
+            v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true;
+            v.src = candidate; v.preload = 'metadata';
+            v.addEventListener('loadeddata', ()=> {
+              // remove other temporary ones
+              const old = document.getElementById('bg-video'); if(old) old.remove();
+              v.id = 'bg-video';
+              console.log('Video candidate loaded and used:', candidate);
+            });
+            v.addEventListener('error', ()=> {
+              console.warn('Video candidate failed:', candidate);
+              v.remove();
+              tryVideo(list, idx+1);
+            });
+            document.body.appendChild(v);
+            // after 900ms, if not loaded, move to next
+            setTimeout(()=> {
+              if(!v || v.readyState === 0){ if(v) v.remove(); tryVideo(list, idx+1); }
+            }, 900);
+          })(VIDEO_CANDIDATES, 0);
+        });
+    }
 
-    // cleanup on navigation (optional)
-    window.addEventListener('pagehide', () => {
-      if(window._vantaEffect && window._vantaEffect.destroy) window._vantaEffect.destroy();
-    });
+    // Helpful console hint
+    console.log('Local background loader is ready. Put "bg.gif" / "bg.mp4" etc. in same folder and reload the page.');
   })();
   </script>
+
+  <!-- small help text for serving locally -->
+  <div style="position:fixed; right:12px; top:12px; z-index:99; color:var(--muted); font-size:12px; background:rgba(0,0,0,0.4); padding:8px 10px; border-radius:8px;">
+    Tip: if opening via <code>file://</code> causes problems, run a local server:
+    <div style="margin-top:6px">
+      <code>python -m http.server 8000</code> (then visit <code>http://localhost:8000</code>)
+    </div>
+  </div>
 </body>
 </html>
