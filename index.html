@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Statistika regressi</title>
   <style>
+    :root{
+      --card-max-width: 1100px;
+      --card-desktop-height: 820px;
+      --card-mobile-height: 96vh; /* used for phones to make card taller */
+    }
+
     html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
     /* Background GIF */
     .bg-gif{
@@ -18,8 +24,8 @@
 
     /* Card containing the embedded form - bigger and dark */
     .card{
-      width: min(1100px, 96%);
-      height: min(820px, 92vh);
+      width: min(var(--card-max-width), 96%);
+      height: min(var(--card-desktop-height), 92vh);
       background: rgba(0,0,0,0.95); /* strong black for the middle card */
       color: #fff; /* white text inside card */
       border-radius: 16px;
@@ -27,6 +33,7 @@
       overflow: hidden; display:flex; flex-direction:column;
       align-items: stretch;
       border: 1px solid rgba(255,255,255,0.06);
+      position: relative;
     }
 
     .card-header{
@@ -47,12 +54,49 @@
     .card-footer{ padding:0.7rem 1rem; font-size:0.9rem; color:rgba(255,255,255,0.85); background:transparent; border-top:1px solid rgba(255,255,255,0.02); }
 
     /* Controls - keep minimal, not fullscreen */
-    .controls{ position: fixed; right:1rem; bottom:1rem; z-index:2; }
+    .controls{ position: fixed; right:1rem; bottom:1rem; z-index:3; }
     .btn{ background: rgba(255,255,255,0.08); color:white; border: none; padding: 0.55rem 0.95rem; border-radius:10px; cursor:pointer; font-size:0.95rem; }
 
-    /* Small responsive tweaks */
-    @media (max-width:900px){ .card{ width: calc(100% - 2rem); height: 86vh; border-radius:12px; } .title{ font-size:1.05rem; } }
-    @media (max-width:520px){ .card{ height: 92vh; padding:0; } .card-header{ padding:0.7rem 0.9rem; } .iframe-wrap{ padding:0.5rem; } }
+    /* Response badge (top-left of the card) */
+    .resp-badge {
+      position: absolute;
+      left: 1rem;
+      top: 1rem;
+      z-index: 4;
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      padding: .4rem .8rem;
+      border-radius: 10px;
+      font-weight: 700;
+      backdrop-filter: blur(6px);
+      font-size: 0.95rem;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    }
+
+    /* Mobile / small-screen adjustments: make the middle card much taller and use more width */
+    @media (max-width:900px){
+      .card{ width: calc(100% - 1.5rem); height: calc(var(--card-mobile-height)); border-radius:12px; }
+      .title{ font-size:1.05rem; }
+      .resp-badge{ left: .9rem; top: .9rem; }
+      iframe{ border-radius:8px; }
+    }
+
+    /* Phones: maximize the middle card and reduce chrome so the form area looks extended */
+    @media (max-width:520px){
+      .page{ padding: 0.6rem; }
+      .card{
+        width: calc(100% - 1rem);
+        height: var(--card-mobile-height); /* ~96vh so it almost fills the screen on phones */
+        border-radius: 10px;
+        margin: 0;
+      }
+      .card-header{ padding: 0.75rem; }
+      .iframe-wrap{ padding: 0.45rem; }
+      .title{ font-size:1rem; }
+      .subtitle{ font-size:0.88rem; }
+      .resp-badge{ left: .7rem; top: .7rem; font-size:0.88rem; padding: .28rem .6rem; }
+      .controls{ right: .6rem; bottom: .6rem; }
+    }
   </style>
 </head>
 <body>
@@ -62,19 +106,22 @@
 
   <main class="page">
     <section class="card" role="region" aria-label="Embedded form">
+      <!-- Response badge -->
+      <div id="respBadge" class="resp-badge">Responses: —</div>
+
       <div class="card-header">
         <div class="brand">
           <div class="title">Statistik regresi ⭐</div>
-          <div class="subtitle">Hubungan pengaruh jumlah uang saku dengan penghasilan dalam waktu 1 minggu.</div>
+          <div class="subtitle">Hubungan pengaruh jumlah uang saku dengan penghasilan dalam waktu 1 minggu</div>
         </div>
       </div>
 
       <div class="iframe-wrap">
-        <!-- Embedded Google Form. Note: the form's internal styling is controlled by Google and cannot be changed from the parent page. -->
+        <!-- Embedded Google Form. -->
         <iframe src="https://docs.google.com/forms/d/e/1FAIpQLScqaX-aPUuq9UxdKuuf_wFxFRCMdrpjEPHhsYZLtyvUKGk7iQ/viewform?embedded=true" title="Embedded Google Form" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
       </div>
 
-      <div class="card-footer">Note: Data akan tidak disebarluaskan.</div>
+      <div class="card-footer">Data yang di butuhkan</div>
     </section>
   </main>
 
@@ -93,8 +140,34 @@
       btn.textContent = hidden ? 'Show GIF' : 'Hide GIF';
     });
 
-    // Troubleshooting: if GIF doesn't show, make sure file named "bg.gif" is in the same folder as this HTML file
-    // and that the filename is lowercase and exact. Also hard refresh the page (Ctrl+F5) if you replaced the file.
+    // ========== Response badge polling (leave API URL empty until you paste your Apps Script URL) ==========
+    const API_URL = 'PASTE_YOUR_WEBAPP_URL_HERE'; // <- replace with your Apps Script web app URL after you deploy
+    const badge = document.getElementById('respBadge');
+    const POLL_INTERVAL = 30000; // 30s
+
+    async function updateBadge() {
+      if (!API_URL || API_URL.includes('PASTE_YOUR_WEBAPP_URL_HERE')) {
+        badge.textContent = 'Responses: (no API URL)';
+        return;
+      }
+      try {
+        const r = await fetch(API_URL, {cache: 'no-store'});
+        if (!r.ok) throw new Error('bad response ' + r.status);
+        const j = await r.json();
+        if (j.error) { badge.textContent = 'Responses: (error)'; console.error(j.error); return; }
+        badge.textContent = `Responses: ${j.count} / ${j.target} — Remaining: ${j.remaining}`;
+      } catch (err) {
+        badge.textContent = 'Responses: (error)';
+        console.error('Badge update error:', err);
+      }
+    }
+
+    // initial try, then interval
+    updateBadge();
+    setInterval(updateBadge, POLL_INTERVAL);
+    // ==============================================
+
+    // Troubleshooting note for GIF file: ensure "bg.gif" is in same folder and filename is exact (case-sensitive on some servers).
   </script>
 </body>
 </html>
