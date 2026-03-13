@@ -84,11 +84,30 @@ html,body{
 /* response counter */
 
 .resp-badge{
-  background:rgba(255,255,255,.08);
-  padding:.4rem .8rem;
-  border-radius:10px;
+  text-align:right;
+}
+
+.resp-text{
   font-weight:700;
   font-size:.95rem;
+}
+
+/* progress bar */
+
+.progress-container{
+  width:200px;
+  height:8px;
+  background:rgba(255,255,255,.15);
+  border-radius:20px;
+  margin-top:4px;
+  overflow:hidden;
+}
+
+.progress-bar{
+  height:100%;
+  width:0%;
+  background:#4ade80;
+  transition:width .5s ease;
 }
 
 /* iframe */
@@ -114,23 +133,6 @@ iframe{
   border-top:1px solid rgba(255,255,255,.05);
 }
 
-/* button */
-
-.controls{
-  position:fixed;
-  right:1rem;
-  bottom:1rem;
-}
-
-.btn{
-  background:rgba(255,255,255,.08);
-  color:white;
-  border:none;
-  padding:.55rem .95rem;
-  border-radius:10px;
-  cursor:pointer;
-}
-
 /* mobile */
 
 @media(max-width:900px){
@@ -141,6 +143,10 @@ iframe{
 }
 
 .title{font-size:1.05rem}
+
+.progress-container{
+  width:150px;
+}
 
 }
 
@@ -166,8 +172,8 @@ iframe{
   font-size:.85rem;
 }
 
-.resp-badge{
-  font-size:.85rem;
+.progress-container{
+  width:120px;
 }
 
 }
@@ -177,7 +183,7 @@ iframe{
 
 <body>
 
-<img id="bgGif" class="bg-gif" src="bg.gif">
+<img class="bg-gif" src="bg.gif">
 
 <main class="page">
 
@@ -192,8 +198,16 @@ Hubungan pengaruh jumlah uang saku dengan penghasilan dalam waktu 1 minggu
 </div>
 </div>
 
-<div id="respBadge" class="resp-badge">
+<div class="resp-badge">
+
+<div id="respText" class="resp-text">
 Responses: —
+</div>
+
+<div class="progress-container">
+<div id="progressBar" class="progress-bar"></div>
+</div>
+
 </div>
 
 </div>
@@ -202,6 +216,7 @@ Responses: —
 
 <iframe
 src="https://docs.google.com/forms/d/e/1FAIpQLScqaX-aPUuq9UxdKuuf_wFxFRCMdrpjEPHhsYZLtyvUKGk7iQ/viewform?embedded=true">
+Loading…
 </iframe>
 
 </div>
@@ -214,30 +229,12 @@ Note: Data akan tidak dipersebarluaskan
 
 </main>
 
-<div class="controls">
-<button id="toggleBtn" class="btn">Hide GIF</button>
-</div>
-
 <script>
-
-/* gif toggle */
-
-const btn=document.getElementById("toggleBtn")
-const bg=document.getElementById("bgGif")
-
-let hidden=false
-
-btn.onclick=()=>{
-hidden=!hidden
-bg.style.visibility=hidden?"hidden":"visible"
-btn.textContent=hidden?"Show GIF":"Hide GIF"
-}
-
-/* response counter */
 
 const API_URL="https://script.google.com/macros/s/AKfycbzL4L0koBhUjThDjQefHNyuCaH3OXUsBFUesu_lvpvHk2PgPvBE5L6WzePjD4NfLnEo/exec"
 
-const badge=document.getElementById("respBadge")
+const respText=document.getElementById("respText")
+const progressBar=document.getElementById("progressBar")
 
 const POLL_INTERVAL=30000
 
@@ -248,13 +245,17 @@ try{
 const r=await fetch(API_URL,{cache:"no-store"})
 const j=await r.json()
 
-badge.textContent=`Responses: ${j.count} / ${j.target}`
+const percent=(j.count/j.target)*100
+
+respText.textContent=`Responses: ${j.count} / ${j.target}`
+
+progressBar.style.width=percent+"%"
 
 }
 
 catch(err){
 
-badge.textContent="Responses: error"
+respText.textContent="Responses: error"
 
 }
 
