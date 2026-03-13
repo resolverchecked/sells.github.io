@@ -3,217 +3,98 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Animated BG — local bg loader</title>
+  <title>Statistika regressi</title>
   <style>
-    :root{
-      --muted:#bfc9d6;
-      --accent:#6ee7b7;
-      --bg-fallback-color:#050507;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      color: #eaf0ff; min-height:100vh; display:flex; align-items:center; justify-content:center;
-      padding:28px; background:var(--bg-fallback-color); position:relative; overflow:auto;
+    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    /* Background GIF */
+    .bg-gif{
+      position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; pointer-events: none; filter: brightness(0.55) saturate(1.05);
     }
 
-    /* GIF / image as CSS background (set by JS) */
-    body.has-gif::before{
-      content:'';
-      position:fixed; inset:0; z-index:0; pointer-events:none;
-      background-repeat:no-repeat; background-position:center; background-size:cover;
-      filter:contrast(.98) saturate(.95); opacity:0.94;
+    /* Page layout */
+    .page{
+      min-height: 100vh; display:flex; align-items:center; justify-content:center; padding:2rem; box-sizing:border-box;
     }
 
-    .bg-overlay{position:fixed;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg, rgba(0,0,0,0.30), rgba(0,0,0,0.55));}
-
-    #bg-video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;opacity:0.95;}
-    .bg-img-fallback{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;opacity:0.95;}
-
-    /* UI */
-    .ui{position:relative;z-index:2;max-width:900px;width:100%}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-    h1{margin:0;font-size:18px}
-    p.lead{margin:0;color:var(--muted);font-size:13px}
-    .card{background:rgba(0,0,0,0.42); border-radius:10px; padding:14px; border:1px solid rgba(255,255,255,0.03);}
-    .meta{color:var(--muted);font-size:13px;margin-top:10px}
-
-    /* reduced-motion banner */
-    #reduced-banner{
-      position:fixed; left:12px; bottom:12px; z-index:99; background:rgba(0,0,0,0.72);
-      color:var(--muted); padding:10px 12px; border-radius:10px; display:flex; gap:10px; align-items:center;
-      box-shadow:0 6px 24px rgba(0,0,0,0.6); font-size:13px;
+    /* Card containing the embedded form - bigger and dark */
+    .card{
+      width: min(1100px, 96%);
+      height: min(820px, 92vh);
+      background: rgba(0,0,0,0.95); /* strong black for the middle card */
+      color: #fff; /* white text inside card */
+      border-radius: 16px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.6);
+      overflow: hidden; display:flex; flex-direction:column;
+      align-items: stretch;
+      border: 1px solid rgba(255,255,255,0.06);
     }
-    .btn{background:var(--accent); color:#072018; border:0; padding:8px 10px; border-radius:8px; cursor:pointer; font-weight:600}
-    .btn.ghost{background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.04)}
-    .help{font-size:12px;color:var(--muted); margin-top:8px}
-    @media (max-width:700px){#reduced-banner{left:8px;right:8px;bottom:8px;flex-direction:column;align-items:flex-start}}
+
+    .card-header{
+      padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.04);
+      display:flex; align-items:center; gap:0.75rem;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    }
+
+    .brand{ display:flex; flex-direction:column; }
+    .title{ font-size:1.2rem; font-weight:700; color:#fff; }
+    .subtitle{ font-size:0.92rem; color:rgba(255,255,255,0.85); }
+
+    /* iframe area - allow internal scrolling */
+    .iframe-wrap{ flex:1 1 auto; padding: 0.8rem; box-sizing:border-box; }
+    iframe{ width:100%; height:100%; border:0; border-radius:10px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02); }
+
+    /* Footer area with small instructions */
+    .card-footer{ padding:0.7rem 1rem; font-size:0.9rem; color:rgba(255,255,255,0.85); background:transparent; border-top:1px solid rgba(255,255,255,0.02); }
+
+    /* Controls - keep minimal, not fullscreen */
+    .controls{ position: fixed; right:1rem; bottom:1rem; z-index:2; }
+    .btn{ background: rgba(255,255,255,0.08); color:white; border: none; padding: 0.55rem 0.95rem; border-radius:10px; cursor:pointer; font-size:0.95rem; }
+
+    /* Small responsive tweaks */
+    @media (max-width:900px){ .card{ width: calc(100% - 2rem); height: 86vh; border-radius:12px; } .title{ font-size:1.05rem; } }
+    @media (max-width:520px){ .card{ height: 92vh; padding:0; } .card-header{ padding:0.7rem 0.9rem; } .iframe-wrap{ padding:0.5rem; } }
   </style>
 </head>
 <body>
-  <div class="bg-overlay" aria-hidden="true"></div>
 
-  <div class="ui">
-    <header>
-      <div>
-        <h1>Local animated background</h1>
-        <p class="lead">Drop a file named <code>bg.gif</code> / <code>bg.mp4</code> (or similar) into this folder.</p>
-      </div>
-      <div class="subtle" style="color:var(--muted)">Local loader</div>
-    </header>
+  <!-- Put bg.gif in the same folder as this file. It will be used as the animated background. -->
+  <img id="bgGif" class="bg-gif" src="bg.gif" alt="background gif">
 
-    <main class="card">
-      <div style="min-height:120px">
-        <strong>Quick checklist</strong>
-        <ul class="meta">
-          <li>Put your animation file in same folder as this file and name it <code>bg.gif</code> or <code>bg.mp4</code> etc.</li>
-          <li>If you open via <code>file://</code> and it fails, try serving with a local HTTP server (instructions below).</li>
-        </ul>
-        <div class="help">If your system/browser has <code>prefers-reduced-motion</code> enabled the page will respect it by default — you can override with the button at the bottom-right.</div>
+  <main class="page">
+    <section class="card" role="region" aria-label="Embedded form">
+      <div class="card-header">
+        <div class="brand">
+          <div class="title">Statistik regresi ⭐</div>
+          <div class="subtitle">Hubungan pengaruh jumlah uang saku dengan penghasilan dalam waktu 1 minggu.</div>
+        </div>
       </div>
-    </main>
-  </div>
 
-  <!-- reduced-motion banner (hidden/shown by JS) -->
-  <div id="reduced-banner" style="display:none" role="region" aria-live="polite">
-    <div>
-      Your system/browser is set to <strong>reduce motion</strong>. Animations are currently suppressed.
-      <div style="margin-top:6px">
-        <button id="animate-anyway" class="btn">Animate anyway</button>
-        <button id="keep-reduced" class="btn ghost">Keep reduced motion</button>
+      <div class="iframe-wrap">
+        <!-- Embedded Google Form. Note: the form's internal styling is controlled by Google and cannot be changed from the parent page. -->
+        <iframe src="https://docs.google.com/forms/d/e/1FAIpQLScqaX-aPUuq9UxdKuuf_wFxFRCMdrpjEPHhsYZLtyvUKGk7iQ/viewform?embedded=true" title="Embedded Google Form" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
       </div>
-    </div>
+
+      <div class="card-footer">Note: Data akan tidak disebarluaskan.</div>
+    </section>
+  </main>
+
+  <div class="controls">
+    <button id="toggleBtn" class="btn">Hide GIF</button>
   </div>
 
   <script>
-  (function(){
-    // local candidates (will check them in order)
-    const IMAGE_CANDIDATES = ['bg', 'bg.gif', 'bg.webp', 'bg.png', 'bg.jpg', 'bg.jpeg'];
-    const VIDEO_CANDIDATES = ['bg.mp4', 'bg.webm', 'bg.ogg'];
+    // Toggle visibility for background GIF
+    const btn = document.getElementById('toggleBtn');
+    const bg = document.getElementById('bgGif');
+    let hidden = false;
+    btn.addEventListener('click', () => {
+      hidden = !hidden;
+      bg.style.visibility = hidden ? 'hidden' : 'visible';
+      btn.textContent = hidden ? 'Show GIF' : 'Hide GIF';
+    });
 
-    const banner = document.getElementById('reduced-banner');
-    const btnAnimate = document.getElementById('animate-anyway');
-    const btnKeep = document.getElementById('keep-reduced');
-
-    const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    // If prefers-reduced-motion, show banner and wait for user choice.
-    if(prefersReduced){
-      banner.style.display = 'flex';
-      btnAnimate.addEventListener('click', () => {
-        banner.style.display = 'none';
-        startLoader({force:true});
-      });
-      btnKeep.addEventListener('click', () => {
-        banner.style.display = 'none';
-        console.log('User chose to keep reduced-motion; background animation suppressed.');
-      });
-    } else {
-      // start normally
-      startLoader({force:false});
-    }
-
-    function injectCssBg(url){
-      try {
-        document.body.classList.add('has-gif');
-        const css = `.has-gif::before{ background-image: url("${url}"); }`;
-        const style = document.createElement('style');
-        style.setAttribute('data-generated','gif-bg');
-        style.appendChild(document.createTextNode(css));
-        document.head.appendChild(style);
-        console.log('Applied CSS background:', url);
-      } catch(e){
-        console.warn('CSS injection failed, using <img> fallback', e);
-        applyImgFallback(url);
-      }
-    }
-
-    function applyImgFallback(url){
-      const existing = document.querySelector('.bg-img-fallback'); if(existing) existing.remove();
-      const img = document.createElement('img'); img.className = 'bg-img-fallback';
-      img.src = url; img.alt = ''; img.setAttribute('aria-hidden','true');
-      img.onload = ()=>console.log('bg <img> loaded:', url);
-      img.onerror = ()=>console.warn('bg <img> load failed:', url);
-      document.body.appendChild(img);
-    }
-
-    function insertVideo(url){
-      const old = document.getElementById('bg-video'); if(old) old.remove();
-      const v = document.createElement('video');
-      v.id = 'bg-video'; v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true; v.src = url;
-      v.setAttribute('aria-hidden','true');
-      v.addEventListener('loadeddata', ()=> console.log('bg <video> loaded:', url));
-      v.addEventListener('error', (e)=> { console.warn('bg <video> failed:', url, e); applyImgFallback(url); });
-      document.body.appendChild(v);
-    }
-
-    function tryImagesSequentially(list){
-      return new Promise((resolve, reject) => {
-        let i = 0;
-        function next(){
-          if(i >= list.length) return reject();
-          const src = list[i++];
-          const img = new Image();
-          img.onload = ()=> resolve(src);
-          img.onerror = ()=> { console.warn('image candidate failed:', src); next(); };
-          try { img.src = src; } catch(e){ console.warn('setting img src error for', src, e); next(); }
-        }
-        next();
-      });
-    }
-
-    // start loader; options: {force:boolean} where force ignores prefers-reduced-motion check
-    function startLoader(opts = {force:false}){
-      if(prefersReduced && !opts.force){
-        console.log('prefers-reduced-motion active; loader will not start.');
-        return;
-      }
-      tryImagesSequentially(IMAGE_CANDIDATES)
-        .then((goodSrc) => {
-          console.log('Image candidate loaded:', goodSrc);
-          injectCssBg(goodSrc);
-        }).catch(() => {
-          console.warn('No image candidate loaded — attempting video candidates');
-          // try each video candidate: we'll insert and rely on loadeddata/error events
-          (function tryVideo(list, idx=0){
-            if(idx >= list.length){ console.warn('No video candidate succeeded — final fallback try "bg" as image element'); applyImgFallback('bg'); return; }
-            const candidate = list[idx];
-            // create a temp video to test quickly
-            const v = document.createElement('video');
-            v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true;
-            v.src = candidate; v.preload = 'metadata';
-            v.addEventListener('loadeddata', ()=> {
-              // remove other temporary ones
-              const old = document.getElementById('bg-video'); if(old) old.remove();
-              v.id = 'bg-video';
-              console.log('Video candidate loaded and used:', candidate);
-            });
-            v.addEventListener('error', ()=> {
-              console.warn('Video candidate failed:', candidate);
-              v.remove();
-              tryVideo(list, idx+1);
-            });
-            document.body.appendChild(v);
-            // after 900ms, if not loaded, move to next
-            setTimeout(()=> {
-              if(!v || v.readyState === 0){ if(v) v.remove(); tryVideo(list, idx+1); }
-            }, 900);
-          })(VIDEO_CANDIDATES, 0);
-        });
-    }
-
-    // Helpful console hint
-    console.log('Local background loader is ready. Put "bg.gif" / "bg.mp4" etc. in same folder and reload the page.');
-  })();
+    // Troubleshooting: if GIF doesn't show, make sure file named "bg.gif" is in the same folder as this HTML file
+    // and that the filename is lowercase and exact. Also hard refresh the page (Ctrl+F5) if you replaced the file.
   </script>
-
-  <!-- small help text for serving locally -->
-  <div style="position:fixed; right:12px; top:12px; z-index:99; color:var(--muted); font-size:12px; background:rgba(0,0,0,0.4); padding:8px 10px; border-radius:8px;">
-    Tip: if opening via <code>file://</code> causes problems, run a local server:
-    <div style="margin-top:6px">
-      <code>python -m http.server 8000</code> (then visit <code>http://localhost:8000</code>)
-    </div>
-  </div>
 </body>
 </html>
